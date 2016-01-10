@@ -4,7 +4,7 @@ var five = require("johnny-five");
 // however you may also explicitly specify the port by passing
 // it as an optional property to the Board constructor:
 var board = new five.Board({
-  port: "/dev/cu.usbmodem1411"
+  port: "/dev/ttyAMA0"
 });
 
 // The board's pins will not be accessible until
