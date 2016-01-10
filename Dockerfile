@@ -1,5 +1,8 @@
 FROM flaviostutz/rpi-johnny-five
 
-ADD /src /data/src
+ADD /src /opt/src
+WORKDIR /opt/src
+RUN npm install -g
 
-CMD ["node", "/data/src/main.js"]
+CMD ["node", "main.js"]
+
