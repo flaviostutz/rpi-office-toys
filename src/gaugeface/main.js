@@ -5,18 +5,17 @@ var five = require("johnny-five");
 var SerialPort = require("serialport").SerialPort;
 
 var config = require('config');
-process.env.NODE_CONFIG_DIR = __dirname + "./../config";
+process.env.NODE_CONFIG_DIR = __dirname + "/../";
 
 var mqtt = require('mqtt');
 var express = require('express');
 var app = express();
 
 var portNumber = process.argv[2];
-var serialPortDev = config.get("port"+ (portNumber) +".serialDev");
 
 var mqttClient = null;
-var mqttServerUrl = config.get("mqtt.serverUrl");
-var mqttBaseTopic = config.get("mqtt.baseTopic");
+var mqttServerUrl = config.get("mqtt-serverUrl");
+var mqttBaseTopic = config.get("mqtt-baseTopic");
 var defaultMqttOptions = {qos: 1, retain: true};
 
 //SPECIFIC TO GAUGEFACE
@@ -25,9 +24,11 @@ var servo1;
 var servo2;
 
 
-if(portNumber==null || serialPortDev==null || mqttServerUrl==null || mqttBaseTopic==null) {
+if(portNumber==null || mqttServerUrl==null || mqttBaseTopic==null) {
   throw "Usage: node gaugeface/main.js [port number]\n\nEx.: node gaugeface/main.js 1, having default.json with entries { 'mqtt.serverUrl': 'mqtt://localhost:8883', 'mqtt.baseTopic': '/1/devices/1/', 'port1.serialDev': '/dev/ttyAMA0'; }"
 }
+
+var serialPortDev = config.get("port"+ (portNumber) +"-serialDev");
 
 console.info("Initializing Gaugeface on port " + portNumber + " using serial at " + serialPortDev);
 
@@ -59,6 +60,27 @@ board.on("ready", function() {
           callback();
         }
       });
+    },
+
+    function(callback) {
+      var port = portNumber * 1000;
+      console.info("Initializing REST API on port "+ port +"...");
+      app.get("/gaugeface/:registerName/:value", function (req, res) {
+        if(req.params.value>=0) {
+          var msg = {
+            value: req.query.value,
+            valid: true
+          }
+          processMessage(req.params.registerName, msg);
+          res.status(200).json({message:"OK"});
+        } else {
+          res.status(400).json({message:"NOT OK"});
+        }
+      });
+      app.listen(port, function () {
+        console.log("REST API usage: http://hostIp:"+ port +"/gaugeface/[servo1|servo2]/[0-180]");
+      });
+      callback();
     },
 
     function(callback) {
@@ -106,25 +128,12 @@ board.on("ready", function() {
 });
 
 
-console.info("Initializing REST API on port 3000...");
-app.get("/gaugeface/:registerName/:value", function (req, res) {
-  var msg = {
-    value: req.params.value,
-    valid: true
-  }
-  processMessage(req.params.registerName, msg);
-  res.send("{message:\"OK\"}");
-});
-app.listen(3000, function () {
-  console.log("REST API usage: /gaugeface/[servo1|servo2]/[angle]");
-});
-
-
 
 function processMessage(registerName, messageObj) {
   eval("gaugeface." + registerName + " = messageObj;");
   eval("gaugeface." + registerName + ".receivedOn = new Date();");
 
+  console.info("Processing message: " + registerName + " -> " + messageObj);
   if(registerName=="servo1") {
     servo1.to(messageObj.value, messageObj.time||0);
   } else if(registerName=="servo2") {

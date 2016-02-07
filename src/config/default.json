@@ -1,0 +1,6 @@
+{
+	"mqtt-serverUrl": "mqtt://test.mosquitto.org:1883",
+	"mqtt-baseTopic": "/1/devices/1/",
+	"port1-serialDev": "/dev/ttyAMA0",
+	"port2-serialDev": "/dev/ttyAMA1"
+}
