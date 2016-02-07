@@ -48,18 +48,18 @@ board.on("ready", function() {
 
     function(callback) {
       //SPECIFIC
-      console.info("Checking if the connected board is a Gaugeface...");
-      this.pinMode(17, this.MODES.INPUT);
-      this.digitalRead(17, function(value) {
-        if(value==0) {
-          throw "On gaugeface, pin 17 must be INPUT reading 1";
-        } else {
-          console.info("OK");
+//      console.info("Checking if the connected board is a Gaugeface...");
+//     this.pinMode(17, this.MODES.INPUT);
+//      this.digitalRead(17, function(value) {
+//        if(value==0) {
+//          throw "On gaugeface, pin 17 must be INPUT reading 1";
+//        } else {
+//          console.info("OK");
           servo1.to(0);
           servo2.to(0);
           callback();
-        }
-      });
+//        }
+//      });
     },
 
     function(callback) {
@@ -86,6 +86,7 @@ board.on("ready", function() {
     function(callback) {
       console.info("Connecting to MQTT server " + mqttServerUrl + "...");
       //Emitted on successful (re)connection (i.e. connack rc=0).
+      mqttClient = mqtt.connect(mqttServerUrl);
       mqttClient.on('connect', function () {
         console.log('[mqttClient#connect]');
         // /[building-id]/devices/[device-hub-id]/[port-number]/[device name]/[register name]
@@ -119,7 +120,6 @@ board.on("ready", function() {
         console.error('[mqttClient#error %s]', err);
         cleanupAndExit(1);
       });
-      mqttClient = mqtt.connect(config.get(mqttServerUrl));
     }
   ], function(err) {
     if(err) throw err;
