@@ -48,13 +48,13 @@ board.on("ready", function() {
 
     function(callback) {
       //SPECIFIC
-      console.debug("Checking if the connected board is a Gaugeface...");
+      console.info("Checking if the connected board is a Gaugeface...");
       this.pinMode(17, this.MODES.INPUT);
       this.digitalRead(17, function(value) {
         if(value==0) {
           throw "On gaugeface, pin 17 must be INPUT reading 1";
         } else {
-          console.debug("OK");
+          console.info("OK");
           servo1.to(0);
           servo2.to(0);
           callback();
