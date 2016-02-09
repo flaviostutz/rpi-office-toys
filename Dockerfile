@@ -1,10 +1,8 @@
 FROM flaviostutz/rpi-johnny-five
 
-#speedup build by optimizing cache usage (may be removed at will)
-#RUN mkdir -p /opt/src/gaugeface && cd /opt/src/gaugeface && npm install serialport
-
 ADD /src /opt/src
 
+RUN cp -R /opt/node_modules /opt/src/gaugeface
 RUN cd /opt/src/gaugeface && npm install
 
 WORKDIR /opt/src
