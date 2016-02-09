@@ -19,7 +19,7 @@ var mqttBaseTopic = config.get("mqtt-baseTopic");
 var defaultMqttOptions = {qos: 1, retain: true};
 
 //SPECIFIC TO GAUGEFACE
-var gaugeface;
+var gaugeface = {};
 var servo1;
 var servo2;
 
@@ -68,7 +68,7 @@ board.on("ready", function() {
       app.get("/gaugeface/:registerName/:value", function (req, res) {
         if(req.params.value>=0) {
           var msg = {
-            value: req.query.value,
+            value: req.params.value,
             valid: true
           }
           processMessage(req.params.registerName, msg);
@@ -90,6 +90,7 @@ board.on("ready", function() {
       mqttClient.on('connect', function () {
         console.log('[mqttClient#connect]');
         // /[building-id]/devices/[device-hub-id]/[port-number]/[device name]/[register name]
+        console.info("Subscribing to " + mqttBaseTopic + "/" + portNumber + "/gaugeface/+");
         mqttClient.subscribe(mqttBaseTopic + "/" + portNumber + "/gaugeface/+");
         callback();
       });
@@ -133,7 +134,7 @@ function processMessage(registerName, messageObj) {
   eval("gaugeface." + registerName + " = messageObj;");
   eval("gaugeface." + registerName + ".receivedOn = new Date();");
 
-  console.info("Processing message: " + registerName + " -> " + messageObj);
+  console.info("Processing message: " + registerName + " -> " + messageObj.value);
   if(registerName=="servo1") {
     servo1.to(messageObj.value, messageObj.time||0);
   } else if(registerName=="servo2") {
