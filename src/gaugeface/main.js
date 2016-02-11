@@ -152,3 +152,29 @@ function cleanupAndExit(code) {
   }
   process.exit(code);
 }
+
+
+
+
+
+
+
+/////////////////
+//SPECIFIC TO GAUGEFACE
+eval("gaugeface." + registerName + " = messageObj;");
+eval("gaugeface." + registerName + ".receivedOn = new Date();");
+
+console.info("Processing message: " + registerName + " -> " + messageObj.value);
+if(registerName=="servo1") {
+  servo1.to(messageObj.value, messageObj.time||0);
+} else if(registerName=="servo2") {
+  servo2.to(messageObj.value, messageObj.time||0);
+}
+
+var gaugeface = {};
+var servo1;
+var servo2;
+servo1 = new five.Servo(10);
+servo2 = new five.Servo(11);
+servo1.to(0);
+servo2.to(0);
