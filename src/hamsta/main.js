@@ -8,4 +8,4 @@ hamstaExtension.on("step", function() {
   console.log("Stepped in " + hamstaExtension.getLastStepElapsedTime());
 });
 
-hamstaExtension.start(500);
+hamstaExtension.start(2);

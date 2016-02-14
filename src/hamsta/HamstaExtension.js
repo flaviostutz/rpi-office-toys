@@ -3,10 +3,6 @@
 var StutzButlerExtension = require("../lib/StutzButlerExtension");
 var util = require("util");
 
-util.inherits(HamstaExtension, StutzButlerExtension);
-module.exports = HamstaExtension;
-var _proto = HamstaExtension.prototype;
-
 //CONSTRUCTOR
 function HamstaExtension(mqttServerUrl, mqttBaseTopic, restApiPort) {
   //call super
@@ -19,6 +15,11 @@ function HamstaExtension(mqttServerUrl, mqttBaseTopic, restApiPort) {
     console.info("Hamsta was initialized. Run, Hamsta, run!");
   });
 }
+
+//MODULE EXPORTS
+util.inherits(HamstaExtension, StutzButlerExtension);
+module.exports = HamstaExtension;
+var _proto = HamstaExtension.prototype;
 
 //METHODS
 _proto.processMessage = function(registerName, registerValue) {

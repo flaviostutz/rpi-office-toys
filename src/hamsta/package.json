@@ -4,7 +4,7 @@
   "description": "Hamster wheel counter for Stutz Appliances",
   "main": "main.js",
   "dependencies": {
-    "../lib/StutzButlerExtension": "1.0.0",
+    "../lib/StutzButlerExtension": "1.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

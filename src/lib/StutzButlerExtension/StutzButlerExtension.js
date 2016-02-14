@@ -1,5 +1,37 @@
 'use strict'
 
+var util = require("util");
+var events = require("events");
+var EventEmitter = require("events").EventEmitter;
+
+//CONSTRUCTOR
+function StutzButlerExtension(extensionName, mqttServerUrl, mqttBaseTopic, restApiPort, serialPortDev) {
+  EventEmitter.call(this);
+  if(mqttServerUrl==null || mqttBaseTopic==null || restApiPort==null || extensionName==null) {
+    throw "None of these params can be null: serialPortDev, mqttServerUrl, mqttBaseTopic, restApiPort, extensionName"
+  }
+  this._serialPortDev = serialPortDev;
+  this._mqttServerUrl = mqttServerUrl;
+  this._mqttBaseTopic = mqttBaseTopic;
+  this._restApiPort = restApiPort;
+  this._extensionName = extensionName;
+
+
+  if(serialPortDev!=null) {
+    console.info("Initializing " + this._extensionName + " on serial port " + this._serialPortDev);
+    this._board = new this._five.Board({
+      port: new SerialPort(this._serialPortDev, {baudrate: 57600})
+    });
+  } else {
+    console.info("serialPortDev is null. Trying to initialize " + this._extensionName + " with rasp-io.");
+    this._board = new this._five.Board({
+      io: new Raspi()
+    });
+  }
+
+  this._board.on("ready", this._init);
+}
+
 //MODULE EXPORT
 util.inherits(StutzButlerExtension, EventEmitter);
 module.exports = StutzButlerExtension;
@@ -29,34 +61,6 @@ _proto._lastStepElapsedTime = 0;
 _proto._lastTimeoutHandler = null;
 _proto._registers = {};
 _proto._defaultMqttOptions = {qos: 1, retain: true};
-
-//CONSTRUCTOR
-function StutzButlerExtension(extensionName, mqttServerUrl, mqttBaseTopic, restApiPort, serialPortDev) {
-  EventEmitter.call(this);
-  if(mqttServerUrl==null || mqttBaseTopic==null || restApiPort==null || extensionName==null) {
-    throw "None of these params can be null: serialPortDev, mqttServerUrl, mqttBaseTopic, restApiPort, extensionName"
-  }
-  this._serialPortDev = serialPortDev;
-  this._mqttServerUrl = mqttServerUrl;
-  this._mqttBaseTopic = mqttBaseTopic;
-  this._restApiPort = restApiPort;
-  this._extensionName = extensionName;
-
-
-  if(serialPortDev!=null) {
-    console.info("Initializing " + this._extensionName + " on serial port " + this._serialPortDev);
-    this._board = new this._five.Board({
-      port: new SerialPort(this._serialPortDev, {baudrate: 57600});
-    });
-  } else {
-    console.info("serialPortDev is null. Trying to initialize " + this._extensionName + " with rasp-io.");
-    this._board = new this._five.Board({
-      io: new Raspi()
-    });
-  }
-
-  this._board.on("ready", this._init);
-}
 
 
 //PRIVATE METHODS
@@ -157,7 +161,7 @@ _proto._init = function() {
     console.info("Error while initializing: " + err);
     if(err) throw err;
   });
-});
+};
 
 /**
  * Close resources and exit process
