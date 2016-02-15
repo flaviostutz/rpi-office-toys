@@ -10,6 +10,9 @@ function StutzButlerExtension(extensionName, mqttServerUrl, mqttBaseTopic, restA
   if(mqttServerUrl==null || mqttBaseTopic==null || restApiPort==null || extensionName==null) {
     throw "None of these params can be null: mqttServerUrl, mqttBaseTopic, restApiPort, extensionName"
   }
+  if(!mqttBaseTopic.endsWith("/")) {
+    throw "[mqttBaseTopic] must end with '/'";
+  }
   this._serialPortDev = serialPortDev;
   this._mqttServerUrl = mqttServerUrl;
   this._mqttBaseTopic = mqttBaseTopic;
@@ -60,7 +63,8 @@ _proto._started = false;
 _proto._lastStepStartTime = 0;
 _proto._lastStepElapsedTime = 0;
 _proto._lastTimeoutHandler = null;
-_proto._registers = {};
+_proto._sensorRegisters = {};
+_proto._actuatorRegisters = {};
 _proto._defaultMqttOptions = {qos: 1, retain: true};
 
 
@@ -115,16 +119,32 @@ _proto._init = function() {
       console.info(">>> Connecting to MQTT server " + _this._mqttServerUrl + " (" + _this._mqttBaseTopic + ")...");
       //Emitted on successful (re)connection (i.e. connack rc=0).
       _this._mqttClient = mqtt.connect(_this._mqttServerUrl);
-      _this._mqttClient.on('connect', function () {
+      _this._mqttClient.on('connect', function (connack) {
         console.log('[mqttClient#connect]');
-        // /[building-id]/devices/[device-hub-id]/[port-number]/[extension name]/[register name]
-        var topicFilter = _this._mqttBaseTopic + "/" + _this._extensionName + "/+'";
+
+        _this._mqttClient.publish(_this._mqttBaseTopic,
+                JSON.stringify({
+                    extensionName: _this._extensionName,
+                    lastConnectionTime: new Date()
+                }),
+                _this._defaultMqttOptions);
+
+        // /[building-id]/devices/[device-hub-id]/[port-number]/[extension name]/actuators|sensors/[register name]
+        var topicFilter = _this._mqttBaseTopic + "actuators/+";
         console.info("Subscribing to '" + topicFilter);
-        this._mqttClient.subscribe(topicFilter);
-        callback();
+        _this._mqttClient.subscribe(topicFilter, {qos:0}, function() {
+          console.info("OK");
+          callback();
+        });
       });
-      //Emitted when the client receives a publish packet
-      _this._mqttClient.on('message', function (topic, message) {
+
+      //Emitted when the client receives a published packet
+      _this._mqttClient.on('message', function (topic, message, packet) {
+        //ignore self messages
+        if(packet.clientId==_this._mqttClient.clientId) {
+          console.info("Ignoring self message. This should not happen");
+          return;
+        }
         console.info('[mqttClient#message %s %s]', topic, message);
         var messageObj = JSON.parse(message);
         var a = 0;
@@ -132,9 +152,10 @@ _proto._init = function() {
           a = 1;
         }
         var topicParts = topic.split("/");
-        var registerName = topicParts[a+6];
-        _this.registers[registerName] = messageObj;
-        _this.processMessage(registerName, messageObj);
+//        var registerType = topicParts[a+6];
+        var registerName = topicParts[a+7];
+        _this._actuatorRegisters[registerName] = messageObj;
+        _this.processActuatorMessage(registerName, messageObj);
       });
       //Emitted after a disconnection.
       _this._mqttClient.on('close', function () {
@@ -159,8 +180,12 @@ _proto._init = function() {
     }
 
   ], function(err) {
-    console.info("Error while initializing: " + err);
-    if(err) throw err;
+    if(err!=null) {
+      console.info("Error during initialization. err=" + err);
+      throw err;
+    } else {
+      console.info("Initialization done");
+    }
   });
 };
 
@@ -200,15 +225,21 @@ _proto.getMqttClient = function() {
 }
 /**
  * Sets a register value and optionally publishes to the MQTT server
+ * registerValue must be a JSON
  */
-_proto.setRegisterValue = function(registerName, registerValue, publishToMqtt) {
-  this._registers[registerName] = registerValue;
+_proto.setSensorRegisterValue = function(registerName, registerValue, publishToMqtt) {
+  this._sensorRegisters[registerName] = registerValue;
   if(publishToMqtt) {
-    this._mqttClient.publish(this._mqttBaseTopic + "/" + registerName, registerValue);
+    this._mqttClient.publish(this._mqttBaseTopic + "sensors/" + registerName,
+                            JSON.stringify(registerValue),
+                            this._defaultMqttOptions);
   }
 }
-_proto.getRegisterValue = function(registerName) {
-  return this._registers[registerName];
+_proto.getSensorRegisterValue = function(registerName) {
+  return this._sensorRegisters[registerName];
+}
+_proto.getActuatorRegisterValue = function(registerName) {
+  return this._actuatorRegisters[registerName];
 }
 
 /**
@@ -231,21 +262,22 @@ _proto.start = function(maxFrequency) {
         function(callback) {
           _this._lastStepElapsedTime = (new Date().getTime() - _this._lastStepStartTime);
           _this.emit("step");//TODO: check if this impacts performance at high frequencies
-          callback();
           if(_this._lastStepElapsedTime < minTimeBetweenSteps) {
-            _this._lastTimeoutHandler = setTimeout(callSteps, (minTimeBetweenSteps - _this._lastStepElapsedTime));
+            _this._lastTimeoutHandler = setTimeout(callback, (minTimeBetweenSteps - _this._lastStepElapsedTime));
           } else {
-            setImmediate(callSteps);
+            callback();
           }
+        },
+        function(callback) {
+          callback();
+          setImmediate(callSteps);
         }
       ], function(err) {
-        console.info("Error while stepping: " + err);
         if(err) throw err;
       });
     }
   }
 
-  //start calling steps in a loop
   setImmediate(callSteps);
 }
 
@@ -276,11 +308,11 @@ _proto.checkConnectedDevice = function(board) {
 }
 
 /**
- * Process a message received both from the REST API or from MQTT Topic
- * @param {string} registerName - Register name. Ex.: temperature, channel1-sensor, gas-sensor
- * @param {string} registerValue - The message object. Ex.: {value:34, unit:degrees}, {value:0.34, unit:ampere}, {value:false, unit:triggered, last-check:2016-02-11 12:45:11}
+ * Process a message received both from the REST API or from MQTT Topic regarding to actuator messages
+ * @param {string} registerName - Actuator register name. Ex.: door, emergency-light, ir-emitter
+ * @param {string} registerValue - The message object. Ex.: {value:close, unit:custom}, {value:67, unit:percent}, {value: ABBABAFFSFS, unit:ir-code}
  */
-_proto.processMessage = function(registerName, registerValue) {
+_proto.processActuatorMessage = function(registerName, registerValue) {
   throw "Abstract method. Implement it.";
 }
 
