@@ -13,13 +13,17 @@ function HamstaExtension(mqttServerUrl, mqttBaseTopic, restApiPort) {
   var board = this.getBoard();
   var _this = this;
   this.on("initialized", function() {
-    board.pinMode(10, five.Pin.INPUT);
-    board.pinMode(11, five.Pin.INPUT);
-    board.digitalRead(10, function(value) {
-      _this.port10Value = value;
+    board.pinMode(7, five.Pin.INPUT);
+    board.pinMode(0, five.Pin.INPUT);
+    board.digitalRead(7, function(value) {
+      _this.port1Value = value;
+	  console.info("port1: " + value);
+	  _this.counter++;
     });
-    board.digitalRead(11, function(value) {
-      _this.port11Value = value;
+    board.digitalRead(0, function(value) {
+      _this.port2Value = value;
+	  console.info("port2: " + value);
+	  _this.calculateMoviment(_this.port1Value,_this.port2Value);
     });
   });
 }
@@ -30,10 +34,15 @@ module.exports = HamstaExtension;
 var _proto = HamstaExtension.prototype;
 
 //VARIABLES
-_proto.port10Value = null;
-_proto.port11Value = null;
+_proto.port1Value = null;
+_proto.port2Value = null;
+_proto.counter = 0;
 
 //METHODS
+_proto.calculateMoviment(port1Value, port2Value) {
+	
+}
+
 _proto.processActuatorMessage = function(registerName, registerValue) {
   if(registerName == "stop") {
     if(registerValue.value == true) {
@@ -48,8 +57,10 @@ _proto.processActuatorMessage = function(registerName, registerValue) {
 }
 
 _proto.step = function(callback, board, five) {
-  this.setSensorRegisterValue("port10", {value:this.port10Value, date: new Date()}, true);
-  this.setSensorRegisterValue("port11", {value:this.port11Value, date: new Date()}, true);
+  this.setSensorRegisterValue("port1", {value:this.port1Value, date: new Date()}, true);
+  this.setSensorRegisterValue("port2", {value:this.port2Value, date: new Date()}, true);
+  console.info("counter: " + this.counter);
+  this.counter = 0;
   callback();
 }
 
