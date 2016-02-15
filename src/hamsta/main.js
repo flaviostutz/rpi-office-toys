@@ -5,7 +5,7 @@ var HamstaExtension = require("./HamstaExtension.js");
 var hamstaExtension = new HamstaExtension("mqtt://test.mosquitto.org:1883", "/1/devices/1/", 1000);
 
 hamstaExtension.on("step", function() {
-  console.log("Stepped in " + hamstaExtension.getLastStepElapsedTime());
+  console.log("Stepped in " + hamstaExtension.getLastStepElapsedTime() + "ms");
 });
 
 hamstaExtension.start(2);

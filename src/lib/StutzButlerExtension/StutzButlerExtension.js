@@ -6,9 +6,9 @@ var EventEmitter = require("events").EventEmitter;
 
 //CONSTRUCTOR
 function StutzButlerExtension(extensionName, mqttServerUrl, mqttBaseTopic, restApiPort, serialPortDev) {
-  EventEmitter.call(this);
+  EventEmitter.call(this);//initialize EventEmitter on this instance
   if(mqttServerUrl==null || mqttBaseTopic==null || restApiPort==null || extensionName==null) {
-    throw "None of these params can be null: serialPortDev, mqttServerUrl, mqttBaseTopic, restApiPort, extensionName"
+    throw "None of these params can be null: mqttServerUrl, mqttBaseTopic, restApiPort, extensionName"
   }
   this._serialPortDev = serialPortDev;
   this._mqttServerUrl = mqttServerUrl;
@@ -29,7 +29,8 @@ function StutzButlerExtension(extensionName, mqttServerUrl, mqttBaseTopic, restA
     });
   }
 
-  this._board.on("ready", this._init);
+  var _this = this;
+  this._board.on("ready", function(){_this._init.call(_this)});
 }
 
 //MODULE EXPORT
@@ -68,8 +69,8 @@ _proto._defaultMqttOptions = {qos: 1, retain: true};
  * Method called as soon as the board is ready for performing device initialization
  */
 _proto._init = function() {
-  console.info(">>> INITIALIZING BOARD "+ _this._extensionName +"...");
   var _this = this;
+  console.info(">>> INITIALIZING BOARD "+ _this._extensionName +"...");
 
   async.series([
 
@@ -106,8 +107,8 @@ _proto._init = function() {
       });
       app.listen(_this._restApiPort, function () {
         console.info("REST API started. http://[hostname]:"+ _this._restApiPort +"/api/[registerName]/[value]");
+        callback();
       });
-      callback();
     },
 
     function(callback) {
@@ -123,7 +124,7 @@ _proto._init = function() {
         callback();
       });
       //Emitted when the client receives a publish packet
-      this._mqttClient.on('message', function (topic, message) {
+      _this._mqttClient.on('message', function (topic, message) {
         console.info('[mqttClient#message %s %s]', topic, message);
         var messageObj = JSON.parse(message);
         var a = 0;
@@ -136,17 +137,17 @@ _proto._init = function() {
         _this.processMessage(registerName, messageObj);
       });
       //Emitted after a disconnection.
-      this._mqttClient.on('close', function () {
+      _this._mqttClient.on('close', function () {
         console.log('[mqttClient#close]');
         _this._cleanupAndExit(1);
       });
       //Emitted when the client goes offline
-      this._mqttClient.on('offline', function () {
+      _this._mqttClient.on('offline', function () {
         console.log('[mqttClient#offline]');
         _this._cleanupAndExit(1);
       });
       //Emitted when there is an error
-      this._mqttClient.on('error', function (err) {
+      _this._mqttClient.on('error', function (err) {
         console.error('[mqttClient#error %s]', err);
         _this._cleanupAndExit(1);
       });
@@ -206,7 +207,7 @@ _proto.setRegisterValue = function(registerName, registerValue, publishToMqtt) {
     this._mqttClient.publish(this._mqttBaseTopic + "/" + registerName, registerValue);
   }
 }
-_proto._getRegisterValue = function(registerName) {
+_proto.getRegisterValue = function(registerName) {
   return this._registers[registerName];
 }
 
@@ -229,12 +230,18 @@ _proto.start = function(maxFrequency) {
         },
         function(callback) {
           _this._lastStepElapsedTime = (new Date().getTime() - _this._lastStepStartTime);
-          _this.emit("step");//TODO: check if this impact performance at high frequencies
+          _this.emit("step");//TODO: check if this impacts performance at high frequencies
+          callback();
           if(_this._lastStepElapsedTime < minTimeBetweenSteps) {
             _this._lastTimeoutHandler = setTimeout(callSteps, (minTimeBetweenSteps - _this._lastStepElapsedTime));
+          } else {
+            setImmediate(callSteps);
           }
         }
-      ]);
+      ], function(err) {
+        console.info("Error while stepping: " + err);
+        if(err) throw err;
+      });
     }
   }
 
@@ -264,7 +271,7 @@ _proto.getLastStepElapsedTime = function() {
  * Perform specific verification to check if the connected board is really the board this module is waiting for
  * @return {boolean} true if device is OK
  */
-_proto.checkConnectedDevice = function() {
+_proto.checkConnectedDevice = function(board) {
   throw "Abstract method. Implement it.";
 }
 
@@ -282,5 +289,4 @@ _proto.processMessage = function(registerName, registerValue) {
  * param {callback} Call callback() after finishing step execution in order to indicated that this method has finished execution (as in "async" module)
  */
 _proto.step = function(callback, board, five) {
-  throw "Abstract method. Implement it.";
-}
+  throw "Abstract method. Implement it.";}
