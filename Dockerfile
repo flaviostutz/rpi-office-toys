@@ -7,6 +7,6 @@ RUN cd /opt && \
     npm install rpi-office-toys/src/hamsta \
     npm install rpi-office-toys/src/gaugeface
 
-WORKDIR /opt/rpi-office-toys/src
+WORKDIR /opt/
 
-CMD ["node", "hamsta/main.js"]
+CMD ["node", "rpi-office-toys/src/hamsta"]
