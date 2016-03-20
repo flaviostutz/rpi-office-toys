@@ -4,6 +4,26 @@ lpd = LPD8806.new(32, 3, 4);
 
 color = {};
 
+function startFadingRainbow(speed, strength)
+  stopRainbow();
+  local n6000 = 0;
+  tmr.alarm(0, 30, 1, function()
+
+    local color = calculateRainbowColor(n6000/10, strength);
+
+    for i = 0, lpd:getLedCount() do
+      lpd:setPixelColor(i, color.r, color.g, color.b);
+    end
+    lpd:show();
+    
+    n6000 = n6000 + speed;
+    if n6000 > 6000 then
+      --smooth transition
+      n6000 = n6000 - 6000;
+    end
+  end)
+end
+
 function startRainbow(speed, width, strength)
   stopRainbow();
   local n = 0;
@@ -70,6 +90,9 @@ function calculateRainbowColor(position, maxStrength)
     color.b = maxStrength - (((100*(position-500))/100) * maxStrength)/100;
     --print("R6 color " .. position .. "-" .. color.r .. "," .. color.g .. "," .. color.b);
   end
+  --hack for more red!
+  --color.g = (500*color.g)/1000;
+  --color.b = (500*color.b)/1000;
   --print("color " .. position .. "-" .. color.r .. "," .. color.g .. "," .. color.b);
   return color;
 end
