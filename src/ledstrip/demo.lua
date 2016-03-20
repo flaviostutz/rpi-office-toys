@@ -12,10 +12,9 @@ function lpd_color(r, g, b)
 end
 
 function lpd_rainbow(speed, width)
-  tmr.alarm(1, 300, 1, function()
+  tmr.alarm(1, 1000, 1, function()
     for i = 0, lpd:getLedCount() do
-      print("Rainbow " .. i);
-      color = calculateRainbowColor(i);
+      color = calculateRainbowColor(i * 30, 127);
       lpd:setPixelColor(i, color.r, color.g, color.b);
     end
     lpd:show();
@@ -103,11 +102,36 @@ function lpd_stop()
   tmr.stop(0)
 end
 
-function calculateRainbowColor(position)
+--'position' goes from 1 to 6000
+function calculateRainbowColor(position, maxStrength)
   color = {};
-  color.r = 111;
-  color.g = 0;
-  color.b = 0;
+  --divide into 6 regions
+  if position >=0 and position <1000 then
+    color.r = maxStrength;
+    color.g = (((1000*position)/1000) * maxStrength)/1000;
+    color.b = 0;
+  elseif position >=1000 and position <2000 then
+    color.r = maxStrength - (((1000*(position-1000))/1000) * maxStrength)/1000;
+    color.g = maxStrength;
+    color.b = 0;
+  elseif position >=2000 and position <3000 then
+    color.r = 0;
+    color.g = maxStrength;
+    color.b = (((1000*(position-2000))/1000) * maxStrength)/1000;
+  elseif position >=3000 and position <4000 then
+    color.r = 0;
+    color.g = maxStrength - (((1000*(position-3000))/1000) * maxStrength)/1000;
+    color.b = maxStrength;
+  elseif position >=4000 and position <5000 then
+    color.r = (((1000*(position-4000))/1000) * maxStrength)/1000;
+    color.g = 0;
+    color.b = maxStrength;
+  else
+    color.r = maxStrength;
+    color.g = 0;
+    color.b = maxStrength - (((1000*(position-5000))/1000) * maxStrength)/1000;
+  end
+  print("color " .. position .. "-" .. color.r .. "," .. color.g .. "," .. color.b);
   return color;
 end
 

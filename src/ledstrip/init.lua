@@ -1,2 +1,4 @@
 print("STARTING LED STRIP DEMO");
---dofile("demo.lua");
+dofile("stacking.lua");
+dofile("rainbow.lua");
+--startRainbow(5, 15, 40);
