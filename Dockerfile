@@ -1,8 +1,12 @@
 FROM flaviostutz/rpi-johnny-five
 
-ADD /src /opt/src
-WORKDIR /opt/src
-RUN npm install -g
+COPY /src /opt/rpi-office-toys/src
 
-CMD ["node", "main.js"]
+RUN cd /opt && \
+    npm install rpi-office-toys/src/lib/StutzButlerExtension \
+    npm install rpi-office-toys/src/hamsta \
+    npm install rpi-office-toys/src/gaugeface
 
+WORKDIR /opt/
+
+CMD ["node", "rpi-office-toys/src/hamsta"]

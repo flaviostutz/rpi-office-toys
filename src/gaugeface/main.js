@@ -19,7 +19,7 @@ var mqttBaseTopic = config.get("mqtt-baseTopic");
 var defaultMqttOptions = {qos: 1, retain: true};
 
 //SPECIFIC TO GAUGEFACE
-var gaugeface;
+var gaugeface = {};
 var servo1;
 var servo2;
 
@@ -57,8 +57,8 @@ board.on("ready", function() {
           servo1.to(0);
           servo2.to(0);
           callback();
-        }
-      });
+//        }
+//      });
     },
 
     function(callback) {
@@ -67,7 +67,7 @@ board.on("ready", function() {
       app.get("/gaugeface/:registerName/:value", function (req, res) {
         if(req.params.value>=0) {
           var msg = {
-            value: req.query.value,
+            value: req.params.value,
             valid: true
           }
           processMessage(req.params.registerName, msg);
@@ -85,9 +85,11 @@ board.on("ready", function() {
     function(callback) {
       console.info("Connecting to MQTT server " + mqttServerUrl + "...");
       //Emitted on successful (re)connection (i.e. connack rc=0).
+      mqttClient = mqtt.connect(mqttServerUrl);
       mqttClient.on('connect', function () {
         console.log('[mqttClient#connect]');
         // /[building-id]/devices/[device-hub-id]/[port-number]/[device name]/[register name]
+        console.info("Subscribing to " + mqttBaseTopic + "/" + portNumber + "/gaugeface/+");
         mqttClient.subscribe(mqttBaseTopic + "/" + portNumber + "/gaugeface/+");
         callback();
       });
@@ -118,7 +120,6 @@ board.on("ready", function() {
         console.error('[mqttClient#error %s]', err);
         cleanupAndExit(1);
       });
-      mqttClient = mqtt.connect(config.get(mqttServerUrl));
     }
   ], function(err) {
     if(err) throw err;
@@ -132,7 +133,7 @@ function processMessage(registerName, messageObj) {
   eval("gaugeface." + registerName + " = messageObj;");
   eval("gaugeface." + registerName + ".receivedOn = new Date();");
 
-  console.info("Processing message: " + registerName + " -> " + messageObj);
+  console.info("Processing message: " + registerName + " -> " + messageObj.value);
   if(registerName=="servo1") {
     servo1.to(messageObj.value, messageObj.time||0);
   } else if(registerName=="servo2") {
@@ -150,3 +151,29 @@ function cleanupAndExit(code) {
   }
   process.exit(code);
 }
+
+
+
+
+
+
+
+/////////////////
+//SPECIFIC TO GAUGEFACE
+eval("gaugeface." + registerName + " = messageObj;");
+eval("gaugeface." + registerName + ".receivedOn = new Date();");
+
+console.info("Processing message: " + registerName + " -> " + messageObj.value);
+if(registerName=="servo1") {
+  servo1.to(messageObj.value, messageObj.time||0);
+} else if(registerName=="servo2") {
+  servo2.to(messageObj.value, messageObj.time||0);
+}
+
+var gaugeface = {};
+var servo1;
+var servo2;
+servo1 = new five.Servo(10);
+servo2 = new five.Servo(11);
+servo1.to(0);
+servo2.to(0);
